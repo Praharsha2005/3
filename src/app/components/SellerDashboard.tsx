@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCollaboration } from '../contexts/CollaborationContext';
 import { useChat } from '../contexts/ChatContext';
-import { Product, Collaboration } from '@/app/types';
+import { Collaboration } from '@/app/types';
+import Image from 'next/image';
 
 export default function SellerDashboard() {
   const { user } = useAuth();
@@ -277,9 +278,11 @@ export default function SellerDashboard() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative">
-                      <img 
+                      <Image 
                         src={preview} 
                         alt="Preview" 
+                        width={200}
+                        height={200}
                         className="w-full h-24 object-cover rounded"
                       />
                       <button
@@ -323,7 +326,7 @@ export default function SellerDashboard() {
       <div className="mb-8">
         <h3 className="text-xl font-bold mb-4">Collaboration Requests</h3>
         {collaborations.length === 0 ? (
-          <p className="text-gray-500">You haven't received any collaboration requests yet.</p>
+          <p className="text-gray-500">You have not received any collaboration requests yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

@@ -3,6 +3,7 @@
 import { useProducts } from '../contexts/ProductsContext';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import Image from 'next/image';
 
 export default function ProductList() {
   const { getAllProducts } = useProducts();
@@ -32,9 +33,11 @@ export default function ProductList() {
           <div key={product.id} className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
             <div className="bg-gray-200 h-48 flex items-center justify-center">
               {product.imagePreviews && product.imagePreviews.length > 0 ? (
-                <img 
+                <Image 
                   src={product.imagePreviews[0]} 
                   alt={product.title} 
+                  width={400}
+                  height={300}
                   className="w-full h-full object-cover"
                 />
               ) : (

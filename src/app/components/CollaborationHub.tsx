@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCollaboration } from '../contexts/CollaborationContext';
 import ChatBox from './ChatBox';
 import { Collaboration, Product } from '@/app/types';
+import Image from 'next/image';
 
 export default function CollaborationHub() {
   const { getAllProducts } = useProducts();
@@ -175,7 +176,7 @@ export default function CollaborationHub() {
         <div>
           <h3 className="text-xl font-bold mb-4">My Collaboration Requests</h3>
           {userCollaborations.length === 0 ? (
-            <p className="text-gray-500">You haven't received any collaboration requests yet.</p>
+            <p className="text-gray-500">You have not received any collaboration requests yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -270,9 +271,11 @@ export default function CollaborationHub() {
                 <div key={project.id} className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
                   <div className="bg-gray-200 h-32 flex items-center justify-center">
                     {project.imagePreviews && project.imagePreviews.length > 0 ? (
-                      <img 
+                      <Image 
                         src={project.imagePreviews[0]} 
                         alt={project.title} 
+                        width={400}
+                        height={300}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -314,7 +317,7 @@ export default function CollaborationHub() {
         <div>
           <h3 className="text-xl font-bold mb-4">Your Collaboration Requests</h3>
           {userCollaborations.length === 0 ? (
-            <p className="text-gray-500">You haven't made any collaboration requests yet.</p>
+            <p className="text-gray-500">You have not made any collaboration requests yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">

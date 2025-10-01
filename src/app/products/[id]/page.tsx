@@ -5,6 +5,7 @@ import { useProducts } from '../../contexts/ProductsContext';
 import { useParams } from 'next/navigation';
 import { Product } from '@/app/types';
 import ChatBox from '../../components/ChatBox';
+import Image from 'next/image';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -45,10 +46,11 @@ export default function ProductDetailPage() {
           <div className="bg-gray-200 h-96 flex items-center justify-center">
             {product.imagePreviews && product.imagePreviews.length > 0 ? (
               <div className="relative w-full h-full">
-                <img 
+                <Image 
                   src={product.imagePreviews[currentImageIndex]} 
                   alt={product.title} 
-                  className="w-full h-full object-contain"
+                  fill
+                  className="object-contain"
                 />
                 {product.imagePreviews.length > 1 && (
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
