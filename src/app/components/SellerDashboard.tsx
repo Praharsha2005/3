@@ -1,0 +1,318 @@
+'use client';
+
+import { useState, useRef, DragEvent } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductsContext';
+import { Product } from '@/app/types';
+
+export default function SellerDashboard() {
+  const { user } = useAuth();
+  const { addProduct, getProductsBySeller } = useProducts();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  
+  const sellerProducts = user ? getProductsBySeller(user.id) : [];
+  
+  const [newProduct, setNewProduct] = useState({
+    title: '',
+    description: '',
+    price: 0,
+    category: 'Technology',
+  });
+  
+  const [files, setFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({
+      ...prev,
+      [name]: name === 'price' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+      
+      // Generate previews for image files
+      const newPreviews: string[] = [];
+      Array.from(e.target.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              newPreviews.push(e.target.result as string);
+              setImagePreviews(prev => [...prev, ...newPreviews]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) return;
+    
+    // Add product with image previews
+    addProduct(newProduct, user.id, imagePreviews);
+    
+    // Reset form
+    setNewProduct({
+      title: '',
+      description: '',
+      price: 0,
+      category: 'Technology',
+    });
+    
+    setFiles([]);
+    setImagePreviews([]);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setFiles(prev => [...prev, ...newFiles]);
+      
+      // Generate previews for image files
+      const newPreviews: string[] = [];
+      newFiles.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              newPreviews.push(e.target.result as string);
+              setImagePreviews(prev => [...prev, ...newPreviews]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold mb-6">Seller Dashboard</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h3 className="font-bold text-lg mb-2">Total Projects</h3>
+          <p className="text-3xl font-bold text-blue-600">{sellerProducts.length}</p>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h3 className="font-bold text-lg mb-2">Sales</h3>
+          <p className="text-3xl font-bold text-green-600">0</p>
+        </div>
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <h3 className="font-bold text-lg mb-2">Collaborations</h3>
+          <p className="text-3xl font-bold text-purple-600">0</p>
+        </div>
+      </div>
+      
+      <div className="mb-8">
+        <h3 className="text-xl font-bold mb-4">Upload New Project</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+            <input 
+              type="text" 
+              name="title"
+              value={newProduct.title}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter project title"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea 
+              name="description"
+              value={newProduct.description}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe your project"
+              rows={4}
+              required
+            ></textarea>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+            <input 
+              type="number" 
+              name="price"
+              value={newProduct.price || ''}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Category</label>
+            <select 
+              name="category"
+              value={newProduct.category}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Technology">Technology</option>
+              <option value="Science">Science</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Environment">Environment</option>
+              <option value="Health">Health</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Files</label>
+            <div 
+              className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer ${
+                isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={triggerFileInput}
+            >
+              <p className="text-gray-500">
+                {isDragOver 
+                  ? 'Drop files here' 
+                  : 'Drag and drop files here or click to upload'}
+              </p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileInputChange}
+                className="hidden"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt"
+              />
+            </div>
+            
+            {(files.length > 0 || imagePreviews.length > 0) && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-600 mb-2">Selected files:</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative">
+                      <img 
+                        src={preview} 
+                        alt="Preview" 
+                        className="w-full h-24 object-cover rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {files.map((file, index) => (
+                    index >= imagePreviews.length && (
+                      <div key={index} className="flex items-center p-2 bg-gray-100 rounded">
+                        <span className="text-sm truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <button 
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Upload Project
+          </button>
+        </form>
+      </div>
+      
+      <div>
+        <h3 className="text-xl font-bold mb-4">Your Projects</h3>
+        {sellerProducts.length === 0 ? (
+          <p className="text-gray-500">You haven't uploaded any projects yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sellerProducts.map((product) => (
+                  <tr key={product.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{product.title}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Active
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

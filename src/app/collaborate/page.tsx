@@ -1,0 +1,13 @@
+import CollaborationHub from '../components/CollaborationHub';
+import ProtectedRoute from '../components/ProtectedRoute';
+
+export default function CollaboratePage() {
+  return (
+    <ProtectedRoute>
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-8">Collaboration Hub</h1>
+        <CollaborationHub />
+      </div>
+    </ProtectedRoute>
+  );
+}
