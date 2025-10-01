@@ -3,15 +3,22 @@
 import { useState, useRef, DragEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProducts } from '../contexts/ProductsContext';
-import { Product } from '@/app/types';
+import { useCollaboration } from '../contexts/CollaborationContext';
+import { useChat } from '../contexts/ChatContext';
+import { Product, Collaboration } from '@/app/types';
 
 export default function SellerDashboard() {
   const { user } = useAuth();
   const { addProduct, getProductsBySeller } = useProducts();
+  const { getCollaborationsForUser, updateCollaborationStatus } = useCollaboration();
+  const { sendMessage } = useChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showCollaborationModal, setShowCollaborationModal] = useState(false);
+  const [selectedCollaboration, setSelectedCollaboration] = useState<Collaboration | null>(null);
   
   const sellerProducts = user ? getProductsBySeller(user.id) : [];
+  const collaborations = getCollaborationsForUser();
   
   const [newProduct, setNewProduct] = useState({
     title: '',
@@ -124,6 +131,40 @@ export default function SellerDashboard() {
     }
   };
 
+  const viewCollaborationDetails = (collaboration: Collaboration) => {
+    setSelectedCollaboration(collaboration);
+    setShowCollaborationModal(true);
+  };
+
+  const handleCollaborationResponse = (status: 'accepted' | 'rejected') => {
+    if (selectedCollaboration && user) {
+      updateCollaborationStatus(selectedCollaboration.id, status);
+      
+      // If accepted, send a confirmation message to the business user
+      if (status === 'accepted') {
+        const project = sellerProducts.find(p => p.id === selectedCollaboration.projectId);
+        const projectName = project ? project.title : 'your project';
+        sendMessage(
+          selectedCollaboration.businessUserId,
+          `Your collaboration request for "${projectName}" has been accepted! Let's start working together.`
+        );
+      }
+      
+      // If rejected, send a rejection message to the business user
+      if (status === 'rejected') {
+        const project = sellerProducts.find(p => p.id === selectedCollaboration.projectId);
+        const projectName = project ? project.title : 'your project';
+        sendMessage(
+          selectedCollaboration.businessUserId,
+          `Your collaboration request for "${projectName}" has been respectfully declined.`
+        );
+      }
+      
+      setShowCollaborationModal(false);
+      setSelectedCollaboration(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold mb-6">Seller Dashboard</h2>
@@ -139,7 +180,7 @@ export default function SellerDashboard() {
         </div>
         <div className="bg-purple-50 p-4 rounded-lg">
           <h3 className="font-bold text-lg mb-2">Collaborations</h3>
-          <p className="text-3xl font-bold text-purple-600">0</p>
+          <p className="text-3xl font-bold text-purple-600">{collaborations.length}</p>
         </div>
       </div>
       
@@ -277,6 +318,160 @@ export default function SellerDashboard() {
           </button>
         </form>
       </div>
+      
+      {/* Collaboration Requests Section */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold mb-4">Collaboration Requests</h3>
+        {collaborations.length === 0 ? (
+          <p className="text-gray-500">You haven't received any collaboration requests yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business Professional</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {collaborations.map((collab: Collaboration) => {
+                  const project = sellerProducts.find(p => p.id === collab.projectId);
+                  return (
+                    <tr key={collab.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {project ? project.title : 'Unknown Project'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        Business Professional
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="max-w-xs truncate" title={collab.message}>
+                          {collab.message}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          collab.status === 'pending' 
+                            ? 'bg-yellow-100 text-yellow-800' 
+                            : collab.status === 'accepted' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                        }`}>
+                          {collab.status === 'pending' 
+                            ? 'Pending' 
+                            : collab.status === 'accepted' 
+                              ? 'Approved' 
+                              : 'Rejected'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {collab.createdAt.toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => viewCollaborationDetails(collab)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          View
+                        </button>
+                        {collab.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => updateCollaborationStatus(collab.id, 'accepted')}
+                              className="text-green-600 hover:text-green-900 mr-2"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => updateCollaborationStatus(collab.id, 'rejected')}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      
+      {/* Collaboration Details Modal */}
+      {showCollaborationModal && selectedCollaboration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Collaboration Request Details</h3>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">Project</p>
+              <p className="font-medium">
+                {sellerProducts.find(p => p.id === selectedCollaboration.projectId)?.title || 'Unknown Project'}
+              </p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">From</p>
+              <p className="font-medium">Business Professional</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">Message</p>
+              <p className="mt-1 p-3 bg-gray-50 rounded">{selectedCollaboration.message}</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">Date</p>
+              <p className="font-medium">{selectedCollaboration.createdAt.toLocaleString()}</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">Status</p>
+              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                selectedCollaboration.status === 'pending' 
+                  ? 'bg-yellow-100 text-yellow-800' 
+                  : selectedCollaboration.status === 'accepted' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+              }`}>
+                {selectedCollaboration.status === 'pending' 
+                  ? 'Pending' 
+                  : selectedCollaboration.status === 'accepted' 
+                    ? 'Approved' 
+                    : 'Rejected'}
+              </span>
+            </div>
+            {selectedCollaboration.status === 'pending' && (
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => handleCollaborationResponse('rejected')}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleCollaborationResponse('accepted')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                >
+                  Accept
+                </button>
+              </div>
+            )}
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowCollaborationModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div>
         <h3 className="text-xl font-bold mb-4">Your Projects</h3>

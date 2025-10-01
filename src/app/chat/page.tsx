@@ -28,7 +28,16 @@ export default function ChatPage() {
   const getParticipantName = (participantId: string) => {
     // For now, we'll use a simple approach
     // In a real app, you would fetch user data based on participantId
-    return user.userType === 'student' ? 'Business Professional' : 'Student Inventor';
+    if (user) {
+      if (user.userType === 'student') {
+        // Student user - other participants are business professionals
+        return 'Business Professional';
+      } else {
+        // Business user - other participants are students
+        return 'Student Inventor';
+      }
+    }
+    return 'Unknown User';
   };
 
   // Function to get the last message content

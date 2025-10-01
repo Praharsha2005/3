@@ -6,7 +6,7 @@ import { Collaboration } from '@/app/types';
 
 interface CollaborationContextType {
   collaborations: Collaboration[];
-  sendCollaborationRequest: (projectId: string, businessUserId: string, message: string) => void;
+  sendCollaborationRequest: (projectId: string, studentUserId: string, message: string) => void;
   getCollaborationsForUser: () => Collaboration[];
   getCollaborationsForProject: (projectId: string) => Collaboration[];
   updateCollaborationStatus: (collaborationId: string, status: 'accepted' | 'rejected') => void;
@@ -42,14 +42,14 @@ export function CollaborationProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('collaborations', JSON.stringify(collaborations));
   }, [collaborations]);
 
-  const sendCollaborationRequest = (projectId: string, businessUserId: string, message: string) => {
-    if (!user) return;
+  const sendCollaborationRequest = (projectId: string, studentUserId: string, message: string) => {
+    if (!user || user.userType !== 'business') return;
     
     const newCollaboration: Collaboration = {
       id: Date.now().toString(),
       projectId,
-      businessUserId, // business user sending the request
-      studentUserId: 'student_placeholder', // This would be the actual student user ID in a real app
+      businessUserId: user.id, // business user sending the request
+      studentUserId: studentUserId, // actual student user ID
       status: 'pending',
       message,
       createdAt: new Date(),

@@ -78,6 +78,21 @@ export default function ChatBox({ participantId, participantName }: { participan
     return messageDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  // Determine if a message is from a business user or student
+  const isBusinessUserMessage = (message: Message) => {
+    if (!user) return false;
+    
+    // In a real app, you would check the actual user type from a user database
+    // For now, we'll use a simplified approach based on the current user's type
+    if (user.userType === 'student') {
+      // If current user is student, then messages from other users are from business professionals
+      return message.senderId !== user.id;
+    } else {
+      // If current user is business, then messages from other users are from students
+      return message.senderId !== user.id;
+    }
+  };
+
   // Group messages by date
   const groupedMessages: { [date: string]: Message[] } = {};
   conversation.forEach(message => {
@@ -118,32 +133,51 @@ export default function ChatBox({ participantId, participantName }: { participan
                     {formatDate(new Date(date))}
                   </span>
                 </div>
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex mb-2 ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                  >
+                {messages.map((message) => {
+                  const isBusinessMessage = isBusinessUserMessage(message);
+                  const isCurrentUser = message.senderId === user?.id;
+                  
+                  return (
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.senderId === user?.id
-                          ? 'bg-green-100 text-gray-800 rounded-br-none'
-                          : 'bg-white text-gray-800 rounded-bl-none'
+                      key={message.id}
+                      className={`flex mb-2 ${
+                        isCurrentUser 
+                          ? 'justify-end' 
+                          : 'justify-start'
                       }`}
                     >
-                      {message.senderId !== user?.id && (
-                        <p className="text-xs font-bold text-green-600 mb-1">{message.senderName}</p>
-                      )}
-                      <p className="break-words">{message.content}</p>
-                      <p
-                        className={`text-xs mt-1 text-right ${
-                          message.senderId === user?.id ? 'text-gray-500' : 'text-gray-400'
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          isCurrentUser
+                            ? 'bg-green-100 text-gray-800 rounded-br-none'
+                            : isBusinessMessage
+                              ? 'bg-white text-gray-800 rounded-bl-none'
+                              : 'bg-blue-100 text-gray-800 rounded-br-none'
                         }`}
                       >
-                        {formatTime(message.timestamp)}
-                      </p>
+                        {!isCurrentUser && (
+                          <p className={`text-xs font-bold mb-1 ${
+                            isBusinessMessage ? 'text-green-600' : 'text-blue-600'
+                          }`}>
+                            {message.senderName}
+                          </p>
+                        )}
+                        <p className="break-words">{message.content}</p>
+                        <p
+                          className={`text-xs mt-1 text-right ${
+                            isCurrentUser 
+                              ? 'text-gray-500' 
+                              : isBusinessMessage 
+                                ? 'text-gray-400' 
+                                : 'text-gray-500'
+                          }`}
+                        >
+                          {formatTime(message.timestamp)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
             <div ref={messagesEndRef} />
