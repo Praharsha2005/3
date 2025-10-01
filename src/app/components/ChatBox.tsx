@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useChat } from '../contexts/ChatContext';
+import { useChat, Message } from '../contexts/ChatContext';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ChatBox({ participantId, participantName }: { participantId: string; participantName: string }) {
@@ -45,7 +45,7 @@ export default function ChatBox({ participantId, participantName }: { participan
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage(e as any);
+      handleSendMessage(e as unknown as React.FormEvent);
     }
   };
 
@@ -79,7 +79,7 @@ export default function ChatBox({ participantId, participantName }: { participan
   };
 
   // Group messages by date
-  const groupedMessages: { [date: string]: any[] } = {};
+  const groupedMessages: { [date: string]: Message[] } = {};
   conversation.forEach(message => {
     const dateKey = new Date(message.timestamp).toDateString();
     if (!groupedMessages[dateKey]) {

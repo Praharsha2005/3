@@ -44,7 +44,7 @@ export default function ProtectedRoute({
       <div className="container mx-auto py-8">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8 text-center">
           <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-          <p>You don't have permission to view this page.</p>
+          <p>You don&apos;t have permission to view this page.</p>
         </div>
       </div>
     );

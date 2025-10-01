@@ -246,7 +246,7 @@ export default function SellerDashboard() {
                         onClick={() => removeFile(index)}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
                       >
-                        ×
+                        &times;
                       </button>
                     </div>
                   ))}
@@ -259,7 +259,7 @@ export default function SellerDashboard() {
                           onClick={() => removeFile(index)}
                           className="ml-2 text-red-500 hover:text-red-700"
                         >
-                          ×
+                          &times;
                         </button>
                       </div>
                     )
@@ -281,7 +281,7 @@ export default function SellerDashboard() {
       <div>
         <h3 className="text-xl font-bold mb-4">Your Projects</h3>
         {sellerProducts.length === 0 ? (
-          <p className="text-gray-500">You haven't uploaded any projects yet.</p>
+          <p className="text-gray-500">You haven&apos;t uploaded any projects yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

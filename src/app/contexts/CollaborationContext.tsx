@@ -25,7 +25,7 @@ export function CollaborationProvider({ children }: { children: ReactNode }) {
       try {
         const parsedCollaborations = JSON.parse(storedCollaborations);
         // Convert timestamp strings back to Date objects
-        const collaborationsWithDates = parsedCollaborations.map((collab: any) => ({
+        const collaborationsWithDates = parsedCollaborations.map((collab: Collaboration) => ({
           ...collab,
           createdAt: new Date(collab.createdAt),
         }));

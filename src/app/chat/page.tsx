@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useChat } from '../contexts/ChatContext';
+import { useChat, Message } from '../contexts/ChatContext';
 import { useAuth } from '../contexts/AuthContext';
 import ChatBox from '../components/ChatBox';
 
@@ -32,7 +32,7 @@ export default function ChatPage() {
   };
 
   // Function to get the last message content
-  const getLastMessage = (conversation: any[]) => {
+  const getLastMessage = (conversation: Message[]) => {
     if (conversation.length === 0) return '';
     const lastMessage = conversation[conversation.length - 1];
     return lastMessage.content.length > 30 

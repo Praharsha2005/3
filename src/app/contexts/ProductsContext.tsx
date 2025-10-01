@@ -27,7 +27,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       try {
         const parsedProducts = JSON.parse(storedProducts);
         // Convert date strings back to Date objects
-        const productsWithDates = parsedProducts.map((product: any) => ({
+        const productsWithDates = parsedProducts.map((product: ProductWithImages) => ({
           ...product,
           createdAt: new Date(product.createdAt),
           updatedAt: new Date(product.updatedAt),

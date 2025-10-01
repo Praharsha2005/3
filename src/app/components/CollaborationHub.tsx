@@ -176,7 +176,7 @@ export default function CollaborationHub() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">By Student Inventor</p>
-                  <p className="text-sm mb-3">{project.description.substring(0, 100)}...</p>
+<p className="text-sm mb-3">{project.description.substring(0, 100)}&hellip;</p>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => openCollaborationModal(project)}
@@ -201,7 +201,7 @@ export default function CollaborationHub() {
       <div>
         <h3 className="text-xl font-bold mb-4">Your Collaboration Requests</h3>
         {userCollaborations.length === 0 ? (
-          <p className="text-gray-500">You haven't made any collaboration requests yet.</p>
+          <p className="text-gray-500">You haven&apos;t made any collaboration requests yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

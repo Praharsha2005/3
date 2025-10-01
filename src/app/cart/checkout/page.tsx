@@ -222,7 +222,7 @@ export default function CheckoutPage() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-bold mb-2">Support Student Innovation</h3>
               <p className="text-sm text-gray-600">
-                By purchasing these projects, you're supporting the next generation of innovators and helping turn ideas into reality.
+                By purchasing these projects, you&apos;re supporting the next generation of innovators and helping turn ideas into reality.
               </p>
             </div>
           </div>

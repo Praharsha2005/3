@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
-interface Message {
+export interface Message {
   id: string;
   senderId: string;
   senderName: string;
@@ -35,7 +35,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       try {
         const parsedMessages = JSON.parse(storedMessages);
         // Convert timestamp strings back to Date objects
-        const messagesWithDates = parsedMessages.map((msg: any) => ({
+        const messagesWithDates = parsedMessages.map((msg: Message) => ({
           ...msg,
           timestamp: new Date(msg.timestamp),
         }));
