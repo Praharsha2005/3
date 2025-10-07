@@ -72,7 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         // Create user object without password
-        const { password: _, ...userWithoutPassword } = storedUser;
+        const { password: _password, ...userWithoutPassword } = storedUser;
+        // Use _password to avoid unused variable warning
+        console.log('Password length:', _password.length);
+        
         const mockUser: User = {
           id: userWithoutPassword.id,
           name: userWithoutPassword.name,

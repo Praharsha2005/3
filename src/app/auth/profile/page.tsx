@@ -5,6 +5,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useProducts } from '@/app/contexts/ProductsContext';
 import { useToast } from '@/app/contexts/ToastContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const { user, logout, deleteAccount } = useAuth();
@@ -35,10 +36,12 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="md:col-span-1">
               {user.profilePhoto ? (
-                <img 
+                <Image 
                   src={user.profilePhoto} 
                   alt="Profile" 
-                  className="w-32 h-32 rounded-full object-cover mx-auto"
+                  width={128}
+                  height={128}
+                  className="rounded-full object-cover mx-auto"
                 />
               ) : (
                 <div className="bg-gray-200 border-2 border-dashed rounded-full w-32 h-32 flex items-center justify-center mx-auto" />

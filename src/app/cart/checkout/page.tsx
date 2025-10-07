@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '@/app/contexts/CartContext';
 import { useProducts } from '@/app/contexts/ProductsContext';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { useChat } from '@/app/contexts/ChatContext';
 import { useToast } from '@/app/contexts/ToastContext';
 import { useRouter } from 'next/navigation';
+import { Product } from '@/app/types';
 
 export default function CheckoutPage() {
   const { cartItems, clearCart } = useCart();
@@ -40,7 +41,7 @@ export default function CheckoutPage() {
   const cartProducts = userCartItems.map(item => {
     const product = products.find(p => p.id === item.productId);
     return product ? { ...product, quantity: item.quantity } : null;
-  }).filter(Boolean);
+  }).filter(Boolean) as (Product & { quantity: number })[];
 
   // Calculate totals
   const subtotal = cartProducts.reduce((sum, product) => {
@@ -78,7 +79,7 @@ export default function CheckoutPage() {
     if (!user) return;
     
     // For each product in cart, send notification to the seller (student)
-    cartProducts.forEach((product: any) => {
+    cartProducts.forEach((product) => {
       if (product && product.sellerId) {
         // Notification to student (seller)
         sendMessage(
@@ -262,7 +263,7 @@ export default function CheckoutPage() {
                   <li>Copy the UPI ID above</li>
                   <li>Open your UPI app (Google Pay, PhonePe, etc.)</li>
                   <li>Send exactly ${total.toFixed(2)} to the UPI ID</li>
-                  <li>After payment, click "Complete Payment" below</li>
+                  <li>After payment, click &quot;Complete Payment&quot; below</li>
                 </ol>
               </div>
               
@@ -283,7 +284,7 @@ export default function CheckoutPage() {
             <h2 className="text-2xl font-bold mb-6">Order Summary</h2>
             
             <div className="space-y-4 mb-6">
-              {cartProducts.map((product: any) => (
+              {cartProducts.map((product) => (
                 <div key={product.id} className="flex justify-between">
                   <div>
                     <p className="font-medium">{product.title}</p>

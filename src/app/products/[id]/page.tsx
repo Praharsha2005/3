@@ -59,7 +59,7 @@ export default function ProductDetailPage() {
   // If no mediaFiles, fallback to imagePreviews for backward compatibility
   const displayMedia = allMedia.length > 0 
     ? allMedia 
-    : (product.imagePreviews || []).map(url => ({ type: 'image' as 'image', url }));
+    : (product.imagePreviews || []).map(url => ({ type: 'image' as const, url }));
 
   // Check if the current user is a student
   const isStudent = user?.userType === 'student';
@@ -175,7 +175,6 @@ export default function ProductDetailPage() {
                 </div>
               </div>
             </div>
-            
 
             <div className="flex items-center justify-between mb-6">
               <span className="text-3xl font-bold text-blue-600">${(product.price * quantity).toFixed(2)}</span>

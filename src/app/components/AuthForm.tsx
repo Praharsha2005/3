@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function AuthForm() {
   const { login, register } = useAuth();
@@ -185,10 +186,12 @@ export default function AuthForm() {
                   onClick={triggerFileInput}
                 >
                   {profilePhotoPreview ? (
-                    <img 
+                    <Image 
                       src={profilePhotoPreview} 
                       alt="Profile preview" 
-                      className="w-full h-full object-cover rounded-xl"
+                      width={64}
+                      height={64}
+                      className="rounded-xl object-cover"
                     />
                   ) : (
                     <span className="text-gray-500 text-xs">Upload</span>

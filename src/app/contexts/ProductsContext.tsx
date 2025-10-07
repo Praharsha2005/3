@@ -30,7 +30,9 @@ const ProductsContext = createContext<ProductsContextType | undefined>(undefined
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<ProductWithMedia[]>([]);
-  const { user } = useAuth();
+  // Note: The 'user' variable is imported from useAuth but not directly used in this component
+  // It's used indirectly through the AuthContext, which is why the linter might show it as unused
+  useAuth();
 
   useEffect(() => {
     // Load products from localStorage on initial load

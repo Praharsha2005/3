@@ -25,7 +25,7 @@ export default function ChatPage() {
   const conversationParticipants = Object.keys(conversations);
 
   // Function to get participant name (in a real app, this would come from user data)
-  const getParticipantName = (participantId: string) => {
+  const getParticipantName = (_participantId: string) => {
     // For now, we'll use a simple approach
     // In a real app, you would fetch user data based on participantId
     if (user) {
