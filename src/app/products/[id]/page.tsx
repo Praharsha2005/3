@@ -176,19 +176,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
             
-            {/* Only show Project Features for logged-in business users */}
-            {isLoggedIn && !isStudent && (
-              <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2">Project Features</h2>
-                <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                  <li>High-quality innovation</li>
-                  <li>Research-backed solution</li>
-                  <li>Practical application</li>
-                  <li>Student developed</li>
-                </ul>
-              </div>
-            )}
-            
+
             <div className="flex items-center justify-between mb-6">
               <span className="text-3xl font-bold text-blue-600">${(product.price * quantity).toFixed(2)}</span>
               
@@ -242,21 +230,6 @@ export default function ProductDetailPage() {
               </button>
             </div>
             <ChatBox participantId={product.sellerId} participantName={creatorName} />
-          </div>
-        )}
-        
-        {/* Additional Information - only for logged-in business users */}
-        {isLoggedIn && !isStudent && (
-          <div className="mt-12 pt-8 border-t">
-            <h2 className="text-2xl font-bold mb-4">About the Inventor</h2>
-            <div className="flex items-center">
-              <div className="bg-gray-200 w-16 h-16 rounded-full mr-4"></div>
-              <div>
-                <h3 className="font-bold text-lg">{creatorName}</h3>
-                <p className="text-gray-600">Innovative Student</p>
-                <p className="text-gray-500 text-sm mt-1">Creating solutions for tomorrow</p>
-              </div>
-            </div>
           </div>
         )}
       </div>
