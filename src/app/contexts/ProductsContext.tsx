@@ -2,23 +2,35 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '@/app/types';
+import { useAuth } from './AuthContext';
 
-// Extended product type to include image data
-interface ProductWithImages extends Product {
+// Extended product type to include media data
+interface ProductWithMedia extends Product {
   imagePreviews?: string[];
+  videoPreviews?: string[];
+  mediaFiles?: { type: 'image' | 'video'; url: string }[];
 }
 
 interface ProductsContextType {
-  products: ProductWithImages[];
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId'>, sellerId: string, imagePreviews?: string[]) => void;
-  getProductsBySeller: (sellerId: string) => ProductWithImages[];
-  getAllProducts: () => ProductWithImages[];
+  products: ProductWithMedia[];
+  addProduct: (
+    product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId'>,
+    sellerId: string,
+    imagePreviews?: string[],
+    videoPreviews?: string[],
+    mediaFiles?: { type: 'image' | 'video'; url: string }[]
+  ) => void;
+  deleteProduct: (productId: string) => void;
+  deleteProductsBySeller: (sellerId: string) => void; // Add function to delete all products by seller
+  getProductsBySeller: (sellerId: string) => ProductWithMedia[];
+  getAllProducts: () => ProductWithMedia[];
 }
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<ProductWithImages[]>([]);
+  const [products, setProducts] = useState<ProductWithMedia[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Load products from localStorage on initial load
@@ -27,7 +39,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       try {
         const parsedProducts = JSON.parse(storedProducts);
         // Convert date strings back to Date objects
-        const productsWithDates = parsedProducts.map((product: ProductWithImages) => ({
+        const productsWithDates = parsedProducts.map((product: ProductWithMedia) => ({
           ...product,
           createdAt: new Date(product.createdAt),
           updatedAt: new Date(product.updatedAt),
@@ -47,17 +59,33 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     }
   }, [products]);
 
-  const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId'>, sellerId: string, imagePreviews?: string[]) => {
-    const newProduct: ProductWithImages = {
+  const addProduct = (
+    productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId'>,
+    sellerId: string,
+    imagePreviews?: string[],
+    videoPreviews?: string[],
+    mediaFiles?: { type: 'image' | 'video'; url: string }[]
+  ) => {
+    const newProduct: ProductWithMedia = {
       id: Date.now().toString(),
       ...productData,
       sellerId,
       createdAt: new Date(),
       updatedAt: new Date(),
       imagePreviews,
+      videoPreviews,
+      mediaFiles,
     };
     
     setProducts(prev => [...prev, newProduct]);
+  };
+
+  const deleteProduct = (productId: string) => {
+    setProducts(prev => prev.filter(product => product.id !== productId));
+  };
+
+  const deleteProductsBySeller = (sellerId: string) => {
+    setProducts(prev => prev.filter(product => product.sellerId !== sellerId));
   };
 
   const getProductsBySeller = (sellerId: string) => {
@@ -71,6 +99,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const value = {
     products,
     addProduct,
+    deleteProduct,
+    deleteProductsBySeller,
     getProductsBySeller,
     getAllProducts,
   };

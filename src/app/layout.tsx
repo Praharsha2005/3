@@ -7,6 +7,7 @@ import { ProductsProvider } from "./contexts/ProductsContext";
 import { CartProvider } from "./contexts/CartContext";
 import { ChatProvider } from "./contexts/ChatContext";
 import { CollaborationProvider } from "./contexts/CollaborationContext";
+import { ToastProvider } from "./contexts/ToastContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +39,10 @@ export default function RootLayout({
             <CartProvider>
               <ChatProvider>
                 <CollaborationProvider>
-                  <Navbar />
-                  <main>{children}</main>
+                  <ToastProvider>
+                    <Navbar />
+                    <main>{children}</main>
+                  </ToastProvider>
                 </CollaborationProvider>
               </ChatProvider>
             </CartProvider>

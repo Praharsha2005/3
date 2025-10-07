@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useRouter } from 'next/navigation';
 
 export default function AuthForm() {
   const { login, register } = useAuth();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -13,12 +18,44 @@ export default function AuthForm() {
     confirmPassword: '',
     userType: 'student', // 'student' or 'business'
   });
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setProfilePhotoPreview(e.target.result as string);
+          setProfilePhoto(e.target.result as string);
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const removeProfilePhoto = () => {
+    setProfilePhoto(null);
+    setProfilePhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +70,9 @@ export default function AuthForm() {
         console.log('Attempting login with:', formData.email, formData.password);
         await login(formData.email, formData.password);
         console.log('Login successful');
+        showToast('Login successful!', 'success');
+        // Redirect to home page after successful login
+        router.push('/');
       } else {
         // Register
         console.log('Attempting registration with:', formData);
@@ -43,13 +83,19 @@ export default function AuthForm() {
           formData.name, 
           formData.email, 
           formData.password, 
-          formData.userType as 'student' | 'business'
+          formData.userType as 'student' | 'business',
+          profilePhoto || undefined
         );
         console.log('Registration successful');
+        showToast('Registration successful! Welcome to Sciencify.', 'success');
+        // Redirect to home page after successful registration
+        router.push('/');
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -129,6 +175,42 @@ export default function AuthForm() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required={!isLogin}
               />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Profile Photo</label>
+              <div className="flex items-center space-x-4">
+                <div 
+                  className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center cursor-pointer"
+                  onClick={triggerFileInput}
+                >
+                  {profilePhotoPreview ? (
+                    <img 
+                      src={profilePhotoPreview} 
+                      alt="Profile preview" 
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <span className="text-gray-500 text-xs">Upload</span>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                {profilePhotoPreview && (
+                  <button
+                    type="button"
+                    onClick={removeProfilePhoto}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="mb-6">

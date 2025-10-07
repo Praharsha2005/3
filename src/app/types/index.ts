@@ -4,6 +4,7 @@ export interface User {
   email: string;
   userType: 'student' | 'business';
   createdAt: Date;
+  profilePhoto?: string;
 }
 
 export interface Product {

@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from '@/app/contexts/ToastContext';
 
 export default function CollaborationDetailPage() {
+  const { showToast } = useToast();
   const [message, setMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, this would submit the collaboration request
-    alert('Collaboration request submitted!');
+    showToast('Collaboration request submitted successfully!', 'success');
   };
 
   return (

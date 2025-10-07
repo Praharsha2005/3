@@ -3,11 +3,15 @@
 import { useCart } from '../contexts/CartContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useRouter } from 'next/navigation';
 
 export default function ShoppingCart() {
   const { cartItems, removeFromCart, updateQuantity } = useCart();
   const { getAllProducts } = useProducts();
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const router = useRouter();
   
   const products = getAllProducts();
 
@@ -29,8 +33,17 @@ export default function ShoppingCart() {
   const total = subtotal + shipping + tax;
 
   const handleCheckout = () => {
-    // In a real app, this would redirect to a checkout page
-    alert('Proceeding to checkout!');
+    if (userCartItems.length === 0) {
+      showToast('Your cart is empty!', 'warning');
+      return;
+    }
+    // Redirect to checkout page
+    router.push('/cart/checkout');
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    removeFromCart(itemId);
+    showToast('Item removed from cart', 'info');
   };
 
   return (
@@ -40,7 +53,10 @@ export default function ShoppingCart() {
       {userCartItems.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg mb-4">Your cart is empty</p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          <button 
+            onClick={() => router.push('/products')}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
             Browse Projects
           </button>
         </div>
@@ -77,7 +93,7 @@ export default function ShoppingCart() {
                   </div>
                   <div className="ml-4 font-bold">${(product.price * item.quantity).toFixed(2)}</div>
                   <button 
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => handleRemoveItem(item.id)}
                     className="ml-4 text-red-600 hover:text-red-800"
                   >
                     Remove

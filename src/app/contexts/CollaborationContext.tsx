@@ -6,7 +6,7 @@ import { Collaboration } from '@/app/types';
 
 interface CollaborationContextType {
   collaborations: Collaboration[];
-  sendCollaborationRequest: (projectId: string, studentUserId: string, message: string) => void;
+  sendCollaborationRequest: (projectId: string, studentUserId: string, message: string, showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void) => void;
   getCollaborationsForUser: () => Collaboration[];
   getCollaborationsForProject: (projectId: string) => Collaboration[];
   updateCollaborationStatus: (collaborationId: string, status: 'accepted' | 'rejected') => void;
@@ -42,8 +42,21 @@ export function CollaborationProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('collaborations', JSON.stringify(collaborations));
   }, [collaborations]);
 
-  const sendCollaborationRequest = (projectId: string, studentUserId: string, message: string) => {
+  const sendCollaborationRequest = (projectId: string, studentUserId: string, message: string, showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void) => {
     if (!user || user.userType !== 'business') return;
+    
+    // Check if a pending collaboration request already exists for this project from this business user
+    const existingRequest = collaborations.find(collab => 
+      collab.projectId === projectId && 
+      collab.businessUserId === user.id && 
+      collab.studentUserId === studentUserId &&
+      collab.status === 'pending'
+    );
+    
+    if (existingRequest) {
+      showToast('You have already sent a collaboration request for this project', 'warning');
+      return;
+    }
     
     const newCollaboration: Collaboration = {
       id: Date.now().toString(),
@@ -56,6 +69,7 @@ export function CollaborationProvider({ children }: { children: ReactNode }) {
     };
     
     setCollaborations(prev => [...prev, newCollaboration]);
+    showToast('Collaboration request sent successfully!', 'success');
   };
 
   const getCollaborationsForUser = () => {

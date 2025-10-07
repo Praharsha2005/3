@@ -2,12 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/app/types';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, password: string, userType: 'student' | 'business') => Promise<void>;
+  register: (name: string, email: string, password: string, userType: 'student' | 'business', profilePhoto?: string) => Promise<void>;
+  deleteAccount: (deleteUserProducts: (userId: string) => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Check if user is logged in (in a real app, you would check for a valid token)
@@ -51,26 +54,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
-        // Retrieve stored user to check userType
-        const storedUser = localStorage.getItem('user');
-        let userType: 'student' | 'business' = 'student';
+        // Check if user exists in localStorage
+        const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
+        const storedUser = storedUsers[email];
         
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            userType = parsedUser.userType || 'student';
-          } catch (e) {
-            console.error('Error parsing stored user for login:', e);
-          }
+        if (!storedUser) {
+          console.log('AuthProvider: User not found');
+          reject(new Error('No account found with this email. Please sign up.'));
+          return;
         }
         
+        // Check password (in a real app, this would be properly hashed)
+        if (storedUser.password !== password) {
+          console.log('AuthProvider: Password mismatch');
+          reject(new Error('Incorrect password'));
+          return;
+        }
+        
+        // Create user object without password
+        const { password: _, ...userWithoutPassword } = storedUser;
         const mockUser: User = {
-          id: '1',
-          name: 'John Doe',
-          email,
-          userType, // Use the actual userType
-          createdAt: new Date(),
+          id: userWithoutPassword.id,
+          name: userWithoutPassword.name,
+          email: userWithoutPassword.email,
+          userType: userWithoutPassword.userType,
+          createdAt: new Date(userWithoutPassword.createdAt),
+          profilePhoto: userWithoutPassword.profilePhoto,
         };
+        
         console.log('AuthProvider: Setting user', mockUser);
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
@@ -85,10 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('user');
     console.log('AuthProvider: User logged out');
+    // Redirect to home page after logout
+    router.push('/');
   };
 
-  const register = async (name: string, email: string, password: string, userType: 'student' | 'business') => {
-    console.log('AuthProvider: Register called with', { name, email, password, userType });
+  const register = async (name: string, email: string, password: string, userType: 'student' | 'business', profilePhoto?: string) => {
+    console.log('AuthProvider: Register called with', { name, email, password, userType, profilePhoto });
     // In a real app, you would make an API call here
     // For demo purposes, we'll simulate a successful registration
     return new Promise<void>((resolve, reject) => {
@@ -106,14 +119,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
+        // Check if user already exists
+        const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
+        if (storedUsers[email]) {
+          console.log('AuthProvider: User already exists');
+          reject(new Error('An account with this email already exists. Please login.'));
+          return;
+        }
+        
         const mockUser: User = {
           id: Date.now().toString(),
           name,
           email,
           userType,
           createdAt: new Date(),
+          profilePhoto,
         };
-        console.log('AuthProvider: Setting user', mockUser);
+        
+        // Store user with password (in a real app, this would be properly hashed)
+        storedUsers[email] = {
+          ...mockUser,
+          password, // Store password for demo purposes only
+        };
+        
+        localStorage.setItem('users', JSON.stringify(storedUsers));
+        console.log('AuthProvider: User registered in localStorage');
+        
+        // Set current user
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
         console.log('AuthProvider: User set in localStorage');
@@ -122,11 +154,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const deleteAccount = (deleteUserProducts: (userId: string) => void) => {
+    console.log('AuthProvider: Delete account called');
+    if (user) {
+      // Delete all products associated with this user by calling the provided function
+      deleteUserProducts(user.id);
+      
+      // Remove user from stored users
+      const storedUsers = JSON.parse(localStorage.getItem('users') || '{}');
+      if (storedUsers[user.email]) {
+        delete storedUsers[user.email];
+        localStorage.setItem('users', JSON.stringify(storedUsers));
+      }
+      
+      // In a real app, you would make an API call to delete the account
+      // For demo purposes, we'll just clear the user data
+      setUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('cart');
+      localStorage.removeItem('chatMessages');
+      localStorage.removeItem('collaborations');
+      console.log('AuthProvider: Account deleted and all data cleared');
+      // Redirect to home page after account deletion
+      router.push('/');
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
     register,
+    deleteAccount,
   };
 
   console.log('AuthProvider: Rendering with user', user);

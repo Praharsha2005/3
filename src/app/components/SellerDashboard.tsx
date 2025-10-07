@@ -5,18 +5,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProducts } from '../contexts/ProductsContext';
 import { useCollaboration } from '../contexts/CollaborationContext';
 import { useChat } from '../contexts/ChatContext';
+import { useToast } from '../contexts/ToastContext';
 import { Collaboration } from '@/app/types';
 import Image from 'next/image';
 
 export default function SellerDashboard() {
   const { user } = useAuth();
-  const { addProduct, getProductsBySeller } = useProducts();
+  const { addProduct, deleteProduct, getProductsBySeller } = useProducts();
   const { getCollaborationsForUser, updateCollaborationStatus } = useCollaboration();
   const { sendMessage } = useChat();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showCollaborationModal, setShowCollaborationModal] = useState(false);
   const [selectedCollaboration, setSelectedCollaboration] = useState<Collaboration | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   
   const sellerProducts = user ? getProductsBySeller(user.id) : [];
   const collaborations = getCollaborationsForUser();
@@ -30,6 +34,8 @@ export default function SellerDashboard() {
   
   const [files, setFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<{ type: 'image' | 'video'; url: string }[]>([]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -44,15 +50,25 @@ export default function SellerDashboard() {
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
       
-      // Generate previews for image files
-      const newPreviews: string[] = [];
+      // Generate previews for image and video files
       Array.from(e.target.files).forEach(file => {
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (e) => {
             if (e.target?.result) {
-              newPreviews.push(e.target.result as string);
-              setImagePreviews(prev => [...prev, ...newPreviews]);
+              const imageUrl = e.target.result as string;
+              setImagePreviews(prev => [...prev, imageUrl]);
+              setMediaFiles(prev => [...prev, { type: 'image', url: imageUrl }]);
+            }
+          };
+          reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              const videoUrl = e.target.result as string;
+              setVideoPreviews(prev => [...prev, videoUrl]);
+              setMediaFiles(prev => [...prev, { type: 'video', url: videoUrl }]);
             }
           };
           reader.readAsDataURL(file);
@@ -66,8 +82,8 @@ export default function SellerDashboard() {
     
     if (!user) return;
     
-    // Add product with image previews
-    addProduct(newProduct, user.id, imagePreviews);
+    // Add product with media files
+    addProduct(newProduct, user.id, imagePreviews, videoPreviews, mediaFiles);
     
     // Reset form
     setNewProduct({
@@ -79,6 +95,8 @@ export default function SellerDashboard() {
     
     setFiles([]);
     setImagePreviews([]);
+    setVideoPreviews([]);
+    setMediaFiles([]);
     
     // Reset file input
     if (fileInputRef.current) {
@@ -104,15 +122,25 @@ export default function SellerDashboard() {
       const newFiles = Array.from(e.dataTransfer.files);
       setFiles(prev => [...prev, ...newFiles]);
       
-      // Generate previews for image files
-      const newPreviews: string[] = [];
+      // Generate previews for image and video files
       newFiles.forEach(file => {
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (e) => {
             if (e.target?.result) {
-              newPreviews.push(e.target.result as string);
-              setImagePreviews(prev => [...prev, ...newPreviews]);
+              const imageUrl = e.target.result as string;
+              setImagePreviews(prev => [...prev, imageUrl]);
+              setMediaFiles(prev => [...prev, { type: 'image', url: imageUrl }]);
+            }
+          };
+          reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              const videoUrl = e.target.result as string;
+              setVideoPreviews(prev => [...prev, videoUrl]);
+              setMediaFiles(prev => [...prev, { type: 'video', url: videoUrl }]);
             }
           };
           reader.readAsDataURL(file);
@@ -123,7 +151,15 @@ export default function SellerDashboard() {
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    
+    // Remove from image previews if it's an image
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    
+    // Remove from video previews if it's a video
+    setVideoPreviews(prev => prev.filter((_, i) => i !== index));
+    
+    // Remove from media files
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const triggerFileInput = () => {
@@ -149,6 +185,7 @@ export default function SellerDashboard() {
           selectedCollaboration.businessUserId,
           `Your collaboration request for "${projectName}" has been accepted! Let's start working together.`
         );
+        showToast('Collaboration request accepted!', 'success');
       }
       
       // If rejected, send a rejection message to the business user
@@ -159,10 +196,51 @@ export default function SellerDashboard() {
           selectedCollaboration.businessUserId,
           `Your collaboration request for "${projectName}" has been respectfully declined.`
         );
+        showToast('Collaboration request declined', 'info');
       }
       
       setShowCollaborationModal(false);
       setSelectedCollaboration(null);
+    }
+  };
+
+  // Also update the inline buttons to show toast notifications
+  const handleInlineCollaborationResponse = (collaborationId: string, status: 'accepted' | 'rejected') => {
+    updateCollaborationStatus(collaborationId, status);
+    
+    if (user) {
+      const collab = collaborations.find(c => c.id === collaborationId);
+      if (collab) {
+        const project = sellerProducts.find(p => p.id === collab.projectId);
+        const projectName = project ? project.title : 'your project';
+        
+        if (status === 'accepted') {
+          sendMessage(
+            collab.businessUserId,
+            `Your collaboration request for "${projectName}" has been accepted! Let's start working together.`
+          );
+          showToast('Collaboration request accepted!', 'success');
+        } else {
+          sendMessage(
+            collab.businessUserId,
+            `Your collaboration request for "${projectName}" has been respectfully declined.`
+          );
+          showToast('Collaboration request declined', 'info');
+        }
+      }
+    }
+  };
+
+  const confirmDeleteProduct = (productId: string) => {
+    setProductToDelete(productId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteProduct = () => {
+    if (productToDelete) {
+      deleteProduct(productToDelete);
+      setShowDeleteConfirm(false);
+      setProductToDelete(null);
     }
   };
 
@@ -247,7 +325,7 @@ export default function SellerDashboard() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Files</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project Media (Images & Videos)</label>
             <div 
               className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer ${
                 isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
@@ -262,29 +340,36 @@ export default function SellerDashboard() {
                   ? 'Drop files here' 
                   : 'Drag and drop files here or click to upload'}
               </p>
+              <p className="text-gray-400 text-sm mt-1">Supports images and videos</p>
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileInputChange}
                 className="hidden"
                 multiple
-                accept="image/*,.pdf,.doc,.docx,.txt"
+                accept="image/*,video/*"
               />
             </div>
             
-            {(files.length > 0 || imagePreviews.length > 0) && (
+            {(files.length > 0 || imagePreviews.length > 0 || videoPreviews.length > 0) && (
               <div className="mt-2">
                 <p className="text-sm text-gray-600 mb-2">Selected files:</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {imagePreviews.map((preview, index) => (
+                  {mediaFiles.map((media, index) => (
                     <div key={index} className="relative">
-                      <Image 
-                        src={preview} 
-                        alt="Preview" 
-                        width={200}
-                        height={200}
-                        className="w-full h-24 object-cover rounded"
-                      />
+                      {media.type === 'image' ? (
+                        <Image 
+                          src={media.url} 
+                          alt="Preview" 
+                          width={200}
+                          height={200}
+                          className="w-full h-24 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-full h-24 bg-gray-200 rounded flex items-center justify-center">
+                          <span className="text-gray-500 text-xs">Video</span>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
@@ -293,20 +378,6 @@ export default function SellerDashboard() {
                         &times;
                       </button>
                     </div>
-                  ))}
-                  {files.map((file, index) => (
-                    index >= imagePreviews.length && (
-                      <div key={index} className="flex items-center p-2 bg-gray-100 rounded">
-                        <span className="text-sm truncate">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="ml-2 text-red-500 hover:text-red-700"
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    )
                   ))}
                 </div>
               </div>
@@ -386,13 +457,13 @@ export default function SellerDashboard() {
                         {collab.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => updateCollaborationStatus(collab.id, 'accepted')}
+                              onClick={() => handleInlineCollaborationResponse(collab.id, 'accepted')}
                               className="text-green-600 hover:text-green-900 mr-2"
                             >
                               Accept
                             </button>
                             <button
-                              onClick={() => updateCollaborationStatus(collab.id, 'rejected')}
+                              onClick={() => handleInlineCollaborationResponse(collab.id, 'rejected')}
                               className="text-red-600 hover:text-red-900"
                             >
                               Reject
@@ -408,6 +479,30 @@ export default function SellerDashboard() {
           </div>
         )}
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Confirm Deletion</h3>
+            <p className="mb-6">Are you sure you want to delete this project? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProduct}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Collaboration Details Modal */}
       {showCollaborationModal && selectedCollaboration && (
@@ -488,7 +583,9 @@ export default function SellerDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Media</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -496,13 +593,26 @@ export default function SellerDashboard() {
                   <tr key={product.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{product.title}</div>
+                      <div className="text-sm text-gray-500 line-clamp-1">{product.description}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.price.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.mediaFiles ? product.mediaFiles.length : 
+                       (product.imagePreviews ? product.imagePreviews.length : 0)} files
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                         Active
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => confirmDeleteProduct(product.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

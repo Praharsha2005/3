@@ -8,12 +8,14 @@ import { useCollaboration } from '../contexts/CollaborationContext';
 import ChatBox from './ChatBox';
 import { Collaboration, Product } from '@/app/types';
 import Image from 'next/image';
+import { useToast } from '../contexts/ToastContext';
 
 export default function CollaborationHub() {
   const { getAllProducts } = useProducts();
-  const { conversations } = useChat();
+  const { conversations, sendMessage } = useChat();
   const { user } = useAuth();
-  const { sendCollaborationRequest, getCollaborationsForUser } = useCollaboration();
+  const { sendCollaborationRequest, getCollaborationsForUser, updateCollaborationStatus } = useCollaboration();
+  const { showToast } = useToast();
   
   const allProducts = getAllProducts();
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,10 +51,10 @@ export default function CollaborationHub() {
       sendCollaborationRequest(
         selectedProjectForCollab.id,
         selectedProjectForCollab.sellerId, // student user ID (recipient)
-        collaborationMessage
+        collaborationMessage,
+        showToast
       );
       setShowCollaborationModal(false);
-      alert('Collaboration request sent successfully!');
     }
   };
 
@@ -68,6 +70,37 @@ export default function CollaborationHub() {
 
   // Show different content based on user type
   const isStudent = user && user.userType === 'student';
+
+  const handleCollaborationResponse = (status: 'accepted' | 'rejected') => {
+    if (selectedCollaboration && user) {
+      updateCollaborationStatus(selectedCollaboration.id, status);
+      
+      // If accepted, send a confirmation message to the business user
+      if (status === 'accepted') {
+        const project = allProducts.find(p => p.id === selectedCollaboration.projectId);
+        const projectName = project ? project.title : 'your project';
+        sendMessage(
+          selectedCollaboration.businessUserId,
+          `Your collaboration request for "${projectName}" has been accepted! Let's start working together.`
+        );
+        showToast('Collaboration request accepted!', 'success');
+      }
+      
+      // If rejected, send a rejection message to the business user
+      if (status === 'rejected') {
+        const project = allProducts.find(p => p.id === selectedCollaboration.projectId);
+        const projectName = project ? project.title : 'your project';
+        sendMessage(
+          selectedCollaboration.businessUserId,
+          `Your collaboration request for "${projectName}" has been respectfully declined.`
+        );
+        showToast('Collaboration request declined', 'info');
+      }
+      
+      setShowCollaborationDetails(false);
+      setSelectedCollaboration(null);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -159,6 +192,22 @@ export default function CollaborationHub() {
                 {selectedCollaboration.status.charAt(0).toUpperCase() + selectedCollaboration.status.slice(1)}
               </span>
             </div>
+            {selectedCollaboration.status === 'pending' && (
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => handleCollaborationResponse('rejected')}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleCollaborationResponse('accepted')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                >
+                  Accept
+                </button>
+              </div>
+            )}
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setShowCollaborationDetails(false)}
@@ -223,6 +272,40 @@ export default function CollaborationHub() {
                           >
                             View
                           </button>
+                          {collab.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  updateCollaborationStatus(collab.id, 'accepted');
+                                  const project = projects.find(p => p.id === collab.projectId);
+                                  const projectName = project ? project.title : 'your project';
+                                  sendMessage(
+                                    collab.businessUserId,
+                                    `Your collaboration request for "${projectName}" has been accepted! Let's start working together.`
+                                  );
+                                  showToast('Collaboration request accepted!', 'success');
+                                }}
+                                className="text-green-600 hover:text-green-900 mr-2"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => {
+                                  updateCollaborationStatus(collab.id, 'rejected');
+                                  const project = projects.find(p => p.id === collab.projectId);
+                                  const projectName = project ? project.title : 'your project';
+                                  sendMessage(
+                                    collab.businessUserId,
+                                    `Your collaboration request for "${projectName}" has been respectfully declined.`
+                                  );
+                                  showToast('Collaboration request declined', 'info');
+                                }}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                           {collab.status === 'accepted' && (
                             <button 
                               onClick={() => startChat(collab.businessUserId, "Business Professional")}

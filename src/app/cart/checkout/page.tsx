@@ -1,8 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useCart } from '@/app/contexts/CartContext';
+import { useProducts } from '@/app/contexts/ProductsContext';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { useChat } from '@/app/contexts/ChatContext';
+import { useToast } from '@/app/contexts/ToastContext';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
+  const { cartItems, clearCart } = useCart();
+  const { getAllProducts } = useProducts();
+  const { user } = useAuth();
+  const { sendMessage } = useChat();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const products = getAllProducts();
+  
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -11,10 +25,31 @@ export default function CheckoutPage() {
     city: '',
     state: '',
     zipCode: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
+    upiId: '',
   });
+  
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  // Get cart items for current user
+  const userCartItems = user 
+    ? cartItems.filter(item => item.userId === user.id)
+    : [];
+    
+  // Get products in cart
+  const cartProducts = userCartItems.map(item => {
+    const product = products.find(p => p.id === item.productId);
+    return product ? { ...product, quantity: item.quantity } : null;
+  }).filter(Boolean);
+
+  // Calculate totals
+  const subtotal = cartProducts.reduce((sum, product) => {
+    return sum + (product ? product.price * product.quantity : 0);
+  }, 0);
+  
+  const shipping = subtotal > 0 ? 15.99 : 0;
+  const tax = subtotal * 0.08;
+  const total = subtotal + shipping + tax;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -23,9 +58,78 @@ export default function CheckoutPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would process the payment
-    alert('Order placed successfully!');
+    setProcessing(true);
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      // Clear cart after successful payment
+      clearCart();
+      
+      // Send notifications to both parties
+      sendPaymentNotifications();
+      
+      setProcessing(false);
+      setPaymentCompleted(true);
+      showToast('Payment processed successfully!', 'success');
+    }, 2000);
   };
+
+  const sendPaymentNotifications = () => {
+    if (!user) return;
+    
+    // For each product in cart, send notification to the seller (student)
+    cartProducts.forEach((product: any) => {
+      if (product && product.sellerId) {
+        // Notification to student (seller)
+        sendMessage(
+          product.sellerId,
+          `Payment of $${total.toFixed(2)} received from ${user.name} for "${product.title}". Please proceed with delivery.`
+        );
+        
+        // Notification to business user (buyer)
+        sendMessage(
+          user.id,
+          `Payment of $${total.toFixed(2)} completed for "${product.title}". You will be notified when the project is delivered.`
+        );
+      }
+    });
+  };
+
+  const handleContinueShopping = () => {
+    router.push('/products');
+  };
+
+  if (paymentCompleted) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="text-green-500 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold mb-4">Payment Successful!</h1>
+          <p className="text-gray-600 mb-6">
+            Your payment of ${total.toFixed(2)} has been processed successfully. 
+            Notifications have been sent to both you and the project creator.
+          </p>
+          <div className="bg-blue-50 p-4 rounded-lg mb-6">
+            <h3 className="font-bold mb-2">Next Steps</h3>
+            <p className="text-sm text-gray-600">
+              The project creator will contact you shortly to arrange delivery. 
+              You can also check your messages for updates.
+            </p>
+          </div>
+          <button
+            onClick={handleContinueShopping}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded"
+          >
+            Continue Shopping
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8">
@@ -127,51 +231,47 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold mb-6">Payment Information</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                <input
-                  type="text"
-                  name="cardNumber"
-                  value={formData.cardNumber}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0000 0000 0000 0000"
-                  required
-                />
+              <div className="bg-yellow-50 p-4 rounded-lg mb-4">
+                <h3 className="font-bold mb-2">UPI Payment</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Please make the payment to the UPI ID of the student project creator.
+                </p>
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    name="upiId"
+                    value={formData.upiId}
+                    onChange={handleChange}
+                    placeholder="student@upi"
+                    className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-r-md"
+                    onClick={() => setFormData(prev => ({ ...prev, upiId: 'student@upi' }))}
+                  >
+                    Use Sample
+                  </button>
+                </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                  <input
-                    type="text"
-                    name="expiryDate"
-                    value={formData.expiryDate}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="MM/YY"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                  <input
-                    type="text"
-                    name="cvv"
-                    value={formData.cvv}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="123"
-                    required
-                  />
-                </div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-bold mb-2">Payment Instructions</h3>
+                <ol className="list-decimal list-inside text-sm text-gray-600 space-y-1">
+                  <li>Copy the UPI ID above</li>
+                  <li>Open your UPI app (Google Pay, PhonePe, etc.)</li>
+                  <li>Send exactly ${total.toFixed(2)} to the UPI ID</li>
+                  <li>After payment, click "Complete Payment" below</li>
+                </ol>
               </div>
               
               <button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mt-6"
+                disabled={processing}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded mt-6 disabled:opacity-50"
               >
-                Place Order
+                {processing ? 'Processing Payment...' : 'Complete Payment'}
               </button>
             </form>
           </div>
@@ -183,38 +283,32 @@ export default function CheckoutPage() {
             <h2 className="text-2xl font-bold mb-6">Order Summary</h2>
             
             <div className="space-y-4 mb-6">
-              <div className="flex justify-between">
-                <div>
-                  <p className="font-medium">AI Water Purifier</p>
-                  <p className="text-sm text-gray-500">Quantity: 1</p>
+              {cartProducts.map((product: any) => (
+                <div key={product.id} className="flex justify-between">
+                  <div>
+                    <p className="font-medium">{product.title}</p>
+                    <p className="text-sm text-gray-500">Quantity: {product.quantity}</p>
+                  </div>
+                  <p className="font-medium">${(product.price * product.quantity).toFixed(2)}</p>
                 </div>
-                <p className="font-medium">$299.99</p>
-              </div>
-              
-              <div className="flex justify-between">
-                <div>
-                  <p className="font-medium">Solar Garden System</p>
-                  <p className="text-sm text-gray-500">Quantity: 2</p>
-                </div>
-                <p className="font-medium">$399.98</p>
-              </div>
+              ))}
               
               <div className="border-t pt-4">
                 <div className="flex justify-between mb-2">
                   <span>Subtotal</span>
-                  <span>$699.97</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span>Shipping</span>
-                  <span>$15.99</span>
+                  <span>${shipping.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span>Tax</span>
-                  <span>$56.00</span>
+                  <span>${tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
                   <span>Total</span>
-                  <span>$771.96</span>
+                  <span>${total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
